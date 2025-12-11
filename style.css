@@ -1,0 +1,1937 @@
+/**
+ * 宇宙コックピット - Space Control Center
+ * メインスタイルシート
+ *
+ * 構成:
+ * 1. CSS変数定義
+ * 2. リセット・ベーススタイル
+ * 3. レイアウト（ヘッダー、ナビゲーション、フッター）
+ * 4. 共通コンポーネント
+ * 5. NOW画面専用スタイル
+ * 6. TIME MACHINE画面専用スタイル
+ * 7. TONIGHT画面専用スタイル
+ * 8. アニメーション定義
+ * 9. レスポンシブデザイン
+ */
+
+/* ========== 1. CSS変数定義 ========== */
+:root {
+    /* カラースキーム */
+    --color-bg-primary: #0a1128;
+    --color-bg-secondary: #001233;
+    --color-bg-panel: #0d1b2a;
+    --color-bg-card: #1b263b;
+
+    --color-accent: #ff6b35;
+    --color-accent-hover: #ff8c5a;
+
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #a0a0a0;
+    --color-text-muted: #6c757d;
+
+    --color-success: #00ff88;
+    --color-warning: #ffd23f;
+    --color-danger: #ee4266;
+    --color-info: #00b4d8;
+
+    /* フォント */
+    --font-heading: 'Orbitron', sans-serif;
+    --font-body: 'Roboto', sans-serif;
+    --font-mono: 'Courier New', monospace;
+
+    /* サイズ */
+    --header-height: 80px;
+    --nav-height: 50px;
+    --footer-height: 60px;
+
+    /* トランジション */
+    --transition-fast: 150ms ease;
+    --transition-normal: 300ms ease;
+    --transition-slow: 500ms ease;
+
+    /* シャドウ */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
+    --shadow-glow: 0 0 20px rgba(255, 107, 53, 0.3);
+
+    /* ボーダー */
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+}
+
+/* ========== 2. リセット・ベーススタイル ========== */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-body);
+    background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%);
+    color: var(--color-text-primary);
+    min-height: 100vh;
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+a {
+    color: var(--color-accent);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+a:hover {
+    color: var(--color-accent-hover);
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+button {
+    cursor: pointer;
+    font-family: inherit;
+}
+
+input, button, select, textarea {
+    font-family: inherit;
+    font-size: inherit;
+}
+
+/* ========== 3. レイアウト ========== */
+
+/* ヘッダー */
+.header {
+    background: var(--color-bg-panel);
+    height: var(--header-height);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header__logo {
+    display: flex;
+    flex-direction: column;
+}
+
+.header__title {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--color-text-primary);
+    text-shadow: 0 0 10px rgba(255, 107, 53, 0.5);
+}
+
+.header__subtitle {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    letter-spacing: 1px;
+}
+
+.header__time {
+    display: flex;
+    gap: 2rem;
+}
+
+.header__time-utc,
+.header__time-local {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.time-label {
+    font-size: 0.625rem;
+    color: var(--color-text-secondary);
+    letter-spacing: 1px;
+}
+
+.time-value {
+    font-family: var(--font-mono);
+    font-size: 1.25rem;
+    color: var(--color-success);
+}
+
+/* ナビゲーション */
+.nav {
+    background: var(--color-bg-secondary);
+    height: var(--nav-height);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nav__link {
+    font-family: var(--font-heading);
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--border-radius-md);
+    transition: all var(--transition-normal);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.nav__link:hover {
+    color: var(--color-text-primary);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.nav__link--active {
+    color: var(--color-accent);
+    background: rgba(255, 107, 53, 0.1);
+    box-shadow: inset 0 -2px 0 var(--color-accent);
+}
+
+.nav__icon {
+    font-size: 1rem;
+}
+
+/* メインコンテンツ */
+.main {
+    min-height: calc(100vh - var(--header-height) - var(--nav-height) - var(--footer-height));
+    padding: 2rem;
+}
+
+/* フッター */
+.footer {
+    background: var(--color-bg-panel);
+    height: var(--footer-height);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+/* ========== 4. 共通コンポーネント ========== */
+
+/* 画面説明 */
+.page-intro {
+    background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(0, 180, 216, 0.1) 100%);
+    border: 1px solid rgba(255, 107, 53, 0.2);
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem 2rem;
+    margin-bottom: 2rem;
+}
+
+.page-intro__title {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    color: var(--color-accent);
+    margin-bottom: 0.75rem;
+}
+
+.page-intro__desc {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    line-height: 1.8;
+}
+
+/* パネル */
+.panel {
+    background: var(--color-bg-panel);
+    border-radius: var(--border-radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    transition: box-shadow var(--transition-normal);
+}
+
+.panel:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.panel__header {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.panel__title {
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.panel__icon {
+    font-size: 1.25rem;
+}
+
+.panel__status,
+.panel__badge,
+.panel__count,
+.panel__date {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--border-radius-sm);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.panel__content {
+    padding: 1.5rem;
+}
+
+.panel__desc {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    padding: 0 1.5rem;
+    margin-top: -0.5rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.6;
+}
+
+/* ダッシュボードグリッド */
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.panel--apod {
+    grid-column: span 2;
+}
+
+/* ボタン */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--border-radius-md);
+    font-family: var(--font-heading);
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    transition: all var(--transition-normal);
+}
+
+.btn--primary {
+    background: var(--color-accent);
+    color: var(--color-text-primary);
+}
+
+.btn--primary:hover {
+    background: var(--color-accent-hover);
+    box-shadow: var(--shadow-glow);
+}
+
+.btn--secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--color-text-primary);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn--secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.btn--accent {
+    background: var(--color-success);
+    color: var(--color-bg-primary);
+}
+
+.btn--accent:hover {
+    background: #00cc6a;
+}
+
+.btn--full {
+    width: 100%;
+}
+
+.btn__icon {
+    font-size: 1.25rem;
+}
+
+.btn--translate {
+    background: rgba(0, 180, 216, 0.2);
+    color: var(--color-info);
+    border: 1px solid var(--color-info);
+    font-size: 0.75rem;
+    padding: 0.5rem 1rem;
+    margin-top: 0.75rem;
+}
+
+.btn--translate:hover {
+    background: var(--color-info);
+    color: var(--color-bg-primary);
+}
+
+.btn--translate.translating {
+    opacity: 0.7;
+    cursor: wait;
+}
+
+.btn--translate.translated {
+    background: rgba(0, 255, 136, 0.2);
+    color: var(--color-success);
+    border-color: var(--color-success);
+}
+
+/* ステータスドット */
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+.status-dot--live {
+    background: var(--color-success);
+    animation: pulse 2s infinite;
+}
+
+/* メッセージ */
+.message {
+    padding: 1rem;
+    border-radius: var(--border-radius-md);
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+}
+
+.message--success {
+    background: rgba(0, 255, 136, 0.1);
+    border: 1px solid var(--color-success);
+    color: var(--color-success);
+}
+
+.message--error {
+    background: rgba(238, 66, 102, 0.1);
+    border: 1px solid var(--color-danger);
+    color: var(--color-danger);
+}
+
+/* 区切り線 */
+.divider {
+    display: flex;
+    align-items: center;
+    margin: 1.5rem 0;
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.divider span {
+    padding: 0 1rem;
+}
+
+/* ========== 5. NOW画面専用スタイル ========== */
+
+/* ISSマップ */
+.iss-map {
+    background: var(--color-bg-card);
+    border-radius: var(--border-radius-md);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.iss-map__globe {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1a237e 0%, #0d47a1 50%, #01579b 100%);
+    position: relative;
+    box-shadow: inset -20px -20px 40px rgba(0, 0, 0, 0.5),
+                0 0 30px rgba(0, 180, 216, 0.3);
+    animation: rotate-globe 60s linear infinite;
+}
+
+.iss-map__globe::before {
+    content: '';
+    position: absolute;
+    top: 10%;
+    left: 10%;
+    width: 30%;
+    height: 30%;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    filter: blur(10px);
+}
+
+.iss-icon {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    background: var(--color-accent);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--color-accent),
+                0 0 20px var(--color-accent);
+    animation: orbit 90s linear infinite, pulse 2s infinite;
+    transform-origin: 90px 90px;
+}
+
+.iss-icon::before {
+    content: '🛰️';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 16px;
+}
+
+/* ISSデータ */
+.iss-data {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+}
+
+.iss-data__row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius-sm);
+}
+
+.iss-data__label {
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+}
+
+.iss-data__value {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    color: var(--color-info);
+}
+
+/* 宇宙飛行士リスト */
+.astronaut-list {
+    list-style: none;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.astronaut-list__item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background var(--transition-fast);
+}
+
+.astronaut-list__item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.astronaut-list__name {
+    font-weight: 500;
+}
+
+.astronaut-list__craft {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    padding: 0.125rem 0.5rem;
+    background: rgba(0, 180, 216, 0.2);
+    border-radius: var(--border-radius-sm);
+}
+
+/* NEOリスト */
+.neo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.neo-card {
+    background: var(--color-bg-card);
+    border-radius: var(--border-radius-md);
+    padding: 1rem;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 1rem;
+    align-items: center;
+    border-left: 3px solid var(--color-info);
+    transition: all var(--transition-normal);
+}
+
+.neo-card:hover {
+    transform: translateX(5px);
+}
+
+.neo-card--hazardous {
+    border-left-color: var(--color-danger);
+    animation: shake 0.5s ease-in-out;
+}
+
+.neo-card__rank {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--color-text-secondary);
+    width: 40px;
+    text-align: center;
+}
+
+.neo-card__info {
+    min-width: 0;
+}
+
+.neo-card__name {
+    font-weight: 700;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.neo-card__date {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.neo-card__stats {
+    display: flex;
+    gap: 1rem;
+}
+
+.neo-card__stat {
+    text-align: right;
+}
+
+.neo-card__stat-label {
+    font-size: 0.625rem;
+    color: var(--color-text-secondary);
+    display: block;
+}
+
+.neo-card__stat-value {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-info);
+}
+
+.neo-card__warning {
+    grid-column: span 3;
+    background: rgba(238, 66, 102, 0.1);
+    color: var(--color-danger);
+    padding: 0.5rem;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.75rem;
+    text-align: center;
+    animation: blink 1s infinite;
+}
+
+/* APOD */
+.apod {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.apod__image {
+    width: 100%;
+    height: 400px;
+    object-fit: cover;
+    border-radius: var(--border-radius-md);
+}
+
+.apod__video {
+    width: 100%;
+    height: 400px;
+    border: none;
+    border-radius: var(--border-radius-md);
+}
+
+.apod__info {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.apod__title {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+}
+
+.apod__explanation-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.apod__explanation {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    line-height: 1.8;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.apod__explanation.translated {
+    color: var(--color-text-primary);
+}
+
+.apod__loading {
+    text-align: center;
+    color: var(--color-text-secondary);
+    padding: 2rem;
+}
+
+/* ========== 6. TIME MACHINE画面専用スタイル ========== */
+
+.time-machine__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.panel--input {
+    grid-column: 1;
+}
+
+.panel--result {
+    grid-column: 2;
+}
+
+.panel--full {
+    grid-column: span 2;
+}
+
+.panel--gallery {
+    margin-top: 1.5rem;
+}
+
+/* 検索フォーム */
+.search-form {
+    margin-bottom: 1.5rem;
+}
+
+.search-form__title {
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.search-form__desc {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 1rem;
+}
+
+.search-form__field {
+    margin-bottom: 1rem;
+}
+
+.search-form__label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.search-form__input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: var(--color-bg-card);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius-md);
+    color: var(--color-text-primary);
+    font-size: 1rem;
+    transition: border-color var(--transition-fast);
+}
+
+.search-form__input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+}
+
+/* 結果表示 */
+.result {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.result__message {
+    text-align: center;
+    font-size: 1.125rem;
+    color: var(--color-accent);
+    padding: 1rem;
+    background: rgba(255, 107, 53, 0.1);
+    border-radius: var(--border-radius-md);
+}
+
+.result__date-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: var(--color-accent);
+    color: white;
+    border-radius: var(--border-radius-md);
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.result__apod {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.result__image {
+    width: 100%;
+    max-height: 400px;
+    object-fit: cover;
+    border-radius: var(--border-radius-md);
+}
+
+.result__video {
+    width: 100%;
+    height: 300px;
+    border: none;
+    border-radius: var(--border-radius-md);
+}
+
+.result__info {
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius-md);
+}
+
+.result__title {
+    font-family: var(--font-heading);
+    font-size: 1.125rem;
+    margin-bottom: 0.5rem;
+}
+
+.result__date {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 1rem;
+}
+
+.result__explanation-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.result__explanation {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    line-height: 1.8;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.result__explanation.translated {
+    color: var(--color-text-primary);
+}
+
+/* 統計グリッド */
+.result__stats {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 1.5rem;
+    border-radius: var(--border-radius-md);
+}
+
+.result__stats-title {
+    font-family: var(--font-heading);
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+}
+
+.stat-card {
+    text-align: center;
+    padding: 1rem;
+    background: var(--color-bg-card);
+    border-radius: var(--border-radius-md);
+}
+
+.stat-card__value {
+    font-family: var(--font-mono);
+    font-size: 1.25rem;
+    color: var(--color-info);
+    font-weight: 700;
+}
+
+.stat-card__label {
+    font-size: 0.625rem;
+    color: var(--color-text-secondary);
+    margin-top: 0.25rem;
+}
+
+/* 保存フォーム */
+.result__save {
+    background: rgba(0, 255, 136, 0.05);
+    padding: 1.5rem;
+    border-radius: var(--border-radius-md);
+    border: 1px solid rgba(0, 255, 136, 0.2);
+}
+
+.result__save-title {
+    font-family: var(--font-heading);
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.save-form__field {
+    margin-bottom: 1rem;
+}
+
+.save-form__label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.save-form__input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: var(--color-bg-card);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius-md);
+    color: var(--color-text-primary);
+}
+
+.save-form__input:focus {
+    outline: none;
+    border-color: var(--color-success);
+}
+
+/* ギャラリー */
+.gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.gallery__card {
+    background: var(--color-bg-card);
+    border-radius: var(--border-radius-md);
+    overflow: hidden;
+    transition: all var(--transition-normal);
+    display: block;
+    color: inherit;
+}
+
+.gallery__card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.gallery__card-image {
+    height: 120px;
+    overflow: hidden;
+}
+
+.gallery__card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-normal);
+}
+
+.gallery__card:hover .gallery__card-image img {
+    transform: scale(1.1);
+}
+
+.gallery__card-info {
+    padding: 1rem;
+}
+
+.gallery__card-nickname {
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.gallery__card-date {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+/* ========== 7. TONIGHT画面専用スタイル ========== */
+
+.tonight__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* 位置情報ステータス */
+.location-status {
+    background: var(--color-bg-panel);
+    padding: 1rem 1.5rem;
+    border-radius: var(--border-radius-md);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.location-status__icon {
+    font-size: 1.5rem;
+}
+
+.location-status__text {
+    flex: 1;
+    font-size: 0.875rem;
+}
+
+.location-status__btn {
+    padding: 0.5rem 1rem;
+    background: var(--color-accent);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.location-status__btn:hover {
+    background: var(--color-accent-hover);
+}
+
+/* 日没・日の出 */
+.sun-times {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 1.5rem;
+}
+
+.sun-time {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.sun-time__icon {
+    font-size: 2.5rem;
+}
+
+.sun-time__label {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.sun-time__value {
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    color: var(--color-warning);
+}
+
+.darkness-countdown {
+    text-align: center;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: var(--border-radius-md);
+    margin-bottom: 1rem;
+}
+
+.darkness-countdown__label {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.darkness-countdown__value {
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    color: var(--color-accent);
+}
+
+.observation-window {
+    text-align: center;
+    padding: 1rem;
+    background: rgba(0, 255, 136, 0.1);
+    border-radius: var(--border-radius-md);
+}
+
+.observation-window__label {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.observation-window__value {
+    font-family: var(--font-mono);
+    font-size: 1.125rem;
+    color: var(--color-success);
+}
+
+/* 月情報 */
+.moon-info {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+}
+
+.moon-visual {
+    width: 100px;
+    height: 100px;
+    position: relative;
+}
+
+.moon-visual__circle {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: linear-gradient(90deg,
+        #1a1a1a 0%,
+        #1a1a1a calc(50% - var(--illumination) / 2),
+        #ffd700 calc(50% + var(--illumination) / 2),
+        #ffd700 100%
+    );
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+}
+
+.moon-data {
+    flex: 1;
+}
+
+.moon-data__row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.moon-data__label {
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+}
+
+.moon-data__value {
+    font-family: var(--font-mono);
+    color: var(--color-warning);
+}
+
+/* ISS通過 */
+.iss-passes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.iss-pass {
+    padding: 1rem;
+    background: var(--color-bg-card);
+    border-radius: var(--border-radius-md);
+    border-left: 3px solid var(--color-accent);
+}
+
+.iss-pass--unavailable {
+    border-left-color: var(--color-text-secondary);
+    text-align: center;
+}
+
+.iss-pass__time {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    color: var(--color-info);
+}
+
+.iss-pass__duration {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.iss-pass__note {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    margin-top: 0.5rem;
+}
+
+/* 観測スコア */
+.observation-score {
+    text-align: center;
+    padding: 1.5rem;
+    background: var(--color-bg-card);
+    border-radius: var(--border-radius-md);
+    margin-bottom: 1rem;
+}
+
+.observation-score__stars {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.star {
+    color: var(--color-text-muted);
+    transition: color var(--transition-fast);
+}
+
+.star--active {
+    color: var(--color-warning);
+    text-shadow: 0 0 10px var(--color-warning);
+}
+
+.observation-score__label {
+    font-family: var(--font-heading);
+    font-size: 1rem;
+}
+
+.observation-factors {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.observation-factor {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius-sm);
+}
+
+.observation-factor__icon {
+    font-size: 1.25rem;
+}
+
+.observation-factor__text {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+}
+
+.observation-advice {
+    padding: 1rem;
+    background: rgba(0, 180, 216, 0.1);
+    border-radius: var(--border-radius-md);
+}
+
+.observation-advice h4 {
+    font-family: var(--font-heading);
+    font-size: 0.875rem;
+    margin-bottom: 0.75rem;
+}
+
+.observation-advice ul {
+    list-style: none;
+}
+
+.observation-advice li {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    padding: 0.25rem 0;
+    padding-left: 1rem;
+    position: relative;
+}
+
+.observation-advice li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: var(--color-info);
+}
+
+/* 星空キャンバス */
+.sky-canvas {
+    height: 300px;
+    background: linear-gradient(180deg, #000428 0%, #004e92 100%);
+    border-radius: var(--border-radius-md);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sky-canvas__stars {
+    position: absolute;
+    inset: 0;
+    background-image:
+        radial-gradient(1px 1px at 10% 20%, white, transparent),
+        radial-gradient(1px 1px at 30% 40%, white, transparent),
+        radial-gradient(1px 1px at 50% 10%, white, transparent),
+        radial-gradient(2px 2px at 70% 60%, white, transparent),
+        radial-gradient(1px 1px at 90% 30%, white, transparent),
+        radial-gradient(1px 1px at 20% 70%, white, transparent),
+        radial-gradient(2px 2px at 40% 90%, white, transparent),
+        radial-gradient(1px 1px at 60% 50%, white, transparent),
+        radial-gradient(1px 1px at 80% 80%, white, transparent),
+        radial-gradient(1px 1px at 15% 55%, white, transparent),
+        radial-gradient(1px 1px at 35% 25%, white, transparent),
+        radial-gradient(2px 2px at 55% 75%, white, transparent),
+        radial-gradient(1px 1px at 75% 15%, white, transparent),
+        radial-gradient(1px 1px at 95% 45%, white, transparent),
+        radial-gradient(1px 1px at 5% 85%, white, transparent);
+    animation: twinkle 3s ease-in-out infinite;
+}
+
+.sky-canvas__info {
+    text-align: center;
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+    z-index: 1;
+}
+
+/* ========== 8. アニメーション定義 ========== */
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes rotate-globe {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes orbit {
+    from {
+        transform: rotate(0deg) translateX(80px);
+    }
+    to {
+        transform: rotate(360deg) translateX(80px);
+    }
+}
+
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-2px);
+    }
+    75% {
+        transform: translateX(2px);
+    }
+}
+
+@keyframes blink {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes twinkle {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ローディングスピナー */
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.loading__spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-top-color: var(--color-accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ========== 9. レスポンシブデザイン ========== */
+
+/* タブレット */
+@media (max-width: 1023px) {
+    .dashboard {
+        grid-template-columns: 1fr;
+    }
+
+    .panel--apod {
+        grid-column: 1;
+    }
+
+    .apod {
+        grid-template-columns: 1fr;
+    }
+
+    .apod__image,
+    .apod__video {
+        height: 300px;
+    }
+
+    .time-machine__grid {
+        grid-template-columns: 1fr;
+    }
+
+    .panel--input,
+    .panel--result,
+    .panel--full {
+        grid-column: 1;
+    }
+
+    .tonight__grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* スマートフォン */
+@media (max-width: 767px) {
+    .header {
+        flex-direction: column;
+        height: auto;
+        padding: 1rem;
+        gap: 1rem;
+    }
+
+    .header__logo {
+        align-items: center;
+        text-align: center;
+    }
+
+    .header__title {
+        font-size: 1.125rem;
+    }
+
+    .header__time {
+        gap: 1rem;
+    }
+
+    .nav {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 0.5rem;
+    }
+
+    .nav__link {
+        padding: 0.5rem 1rem;
+        font-size: 0.75rem;
+    }
+
+    .main {
+        padding: 1rem;
+    }
+
+    .panel__header {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: flex-start;
+    }
+
+    .iss-data {
+        grid-template-columns: 1fr;
+    }
+
+    .neo-card {
+        grid-template-columns: auto 1fr;
+    }
+
+    .neo-card__stats {
+        grid-column: span 2;
+        justify-content: space-between;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .stat-card__value {
+        font-size: 1rem;
+    }
+
+    .gallery {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .sun-times {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .moon-info {
+        flex-direction: column;
+    }
+
+    .footer {
+        flex-direction: column;
+        height: auto;
+        padding: 1rem;
+        gap: 0.5rem;
+        text-align: center;
+    }
+}
+
+/* 小さいスマートフォン */
+@media (max-width: 480px) {
+    html {
+        font-size: 14px;
+    }
+
+    .gallery {
+        grid-template-columns: 1fr;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ========== 10. 追加機能スタイル ========== */
+
+/* 宇宙統計情報 */
+.panel--stats {
+    grid-column: span 2;
+}
+
+.space-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+}
+
+.space-stat-card {
+    background: linear-gradient(135deg, var(--color-bg-card) 0%, rgba(0, 180, 216, 0.1) 100%);
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    text-align: center;
+    border: 1px solid rgba(0, 180, 216, 0.2);
+    transition: all var(--transition-normal);
+}
+
+.space-stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 180, 216, 0.2);
+}
+
+.space-stat-card__icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.space-stat-card__value {
+    font-family: var(--font-mono);
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-info);
+    margin-bottom: 0.5rem;
+}
+
+.space-stat-card__label {
+    font-size: 0.875rem;
+    color: var(--color-text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.space-stat-card__sub {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+/* 惑星リスト */
+.planets-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.planet-card {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem;
+    background: var(--color-bg-card);
+    border-radius: var(--border-radius-md);
+    border-left: 3px solid var(--color-warning);
+    transition: all var(--transition-normal);
+}
+
+.planet-card:hover {
+    transform: translateX(5px);
+    box-shadow: var(--shadow-md);
+}
+
+.planet-card__symbol {
+    font-size: 2rem;
+    width: 50px;
+    text-align: center;
+}
+
+.planet-card__info {
+    min-width: 80px;
+}
+
+.planet-card__name {
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.planet-card__name-en {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.planet-card__details {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.planet-card__detail {
+    text-align: center;
+}
+
+.planet-card__label {
+    display: block;
+    font-size: 0.625rem;
+    color: var(--color-text-secondary);
+}
+
+.planet-card__value {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    color: var(--color-warning);
+}
+
+.planet-card__note {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    grid-column: span 4;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* 星座グリッド */
+.constellations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.constellation-card {
+    background: var(--color-bg-card);
+    border-radius: var(--border-radius-md);
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all var(--transition-normal);
+}
+
+.constellation-card:hover {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 20px rgba(255, 107, 53, 0.1);
+}
+
+.constellation-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.constellation-card__name {
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.constellation-card__difficulty {
+    font-size: 0.625rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius-sm);
+}
+
+.difficulty--easy {
+    background: rgba(0, 255, 136, 0.2);
+    color: var(--color-success);
+}
+
+.difficulty--normal {
+    background: rgba(255, 210, 63, 0.2);
+    color: var(--color-warning);
+}
+
+.constellation-card__star,
+.constellation-card__direction {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.constellation-card__star .label,
+.constellation-card__direction .label {
+    color: var(--color-info);
+}
+
+.constellation-card__desc {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* イベントリスト */
+.events-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.event-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--color-bg-card);
+    border-radius: var(--border-radius-md);
+    transition: all var(--transition-normal);
+}
+
+.event-card:hover {
+    transform: translateX(5px);
+}
+
+.event-card--meteor {
+    border-left: 3px solid var(--color-warning);
+}
+
+.event-card--season {
+    border-left: 3px solid var(--color-info);
+}
+
+.event-card__date {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: var(--border-radius-sm);
+    padding: 0.5rem 0.75rem;
+    text-align: center;
+    min-width: 60px;
+}
+
+.event-card__month {
+    font-size: 0.625rem;
+    color: var(--color-text-secondary);
+}
+
+.event-card__day {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-accent);
+}
+
+.event-card__info {
+    flex: 1;
+}
+
+.event-card__name {
+    font-weight: 700;
+}
+
+.event-card__type {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.event-card__countdown {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+}
+
+.event-card__countdown .days {
+    font-family: var(--font-mono);
+    font-size: 1.25rem;
+    color: var(--color-accent);
+    font-weight: 700;
+}
+
+.event-card__countdown .today {
+    color: var(--color-success);
+    font-weight: 700;
+    animation: pulse 1s infinite;
+}
+
+/* 星空マップの改善 */
+.sky-canvas {
+    height: 350px;
+    background: radial-gradient(ellipse at center, #001428 0%, #000814 100%);
+    border-radius: var(--border-radius-lg);
+    position: relative;
+    overflow: hidden;
+}
+
+.sky-canvas__compass {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.compass-n, .compass-e, .compass-s, .compass-w {
+    position: absolute;
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    background: rgba(0, 0, 0, 0.5);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius-sm);
+}
+
+.compass-n { top: 10px; left: 50%; transform: translateX(-50%); }
+.compass-s { bottom: 10px; left: 50%; transform: translateX(-50%); }
+.compass-e { right: 10px; top: 50%; transform: translateY(-50%); }
+.compass-w { left: 10px; top: 50%; transform: translateY(-50%); }
+
+.sky-canvas__zenith {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.625rem;
+    color: var(--color-text-muted);
+    background: rgba(0, 0, 0, 0.5);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius-sm);
+}
+
+.sky-canvas__constellation {
+    position: absolute;
+    font-size: 0.75rem;
+    color: var(--color-warning);
+    background: rgba(255, 210, 63, 0.1);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid rgba(255, 210, 63, 0.3);
+    animation: twinkle 3s ease-in-out infinite;
+}
+
+.sky-canvas__constellation--top-left { top: 20%; left: 20%; animation-delay: 0s; }
+.sky-canvas__constellation--top-right { top: 25%; right: 25%; animation-delay: 0.5s; }
+.sky-canvas__constellation--center { top: 45%; left: 45%; animation-delay: 1s; }
+.sky-canvas__constellation--bottom-left { bottom: 25%; left: 25%; animation-delay: 1.5s; }
+.sky-canvas__constellation--bottom-right { bottom: 20%; right: 20%; animation-delay: 2s; }
+
+/* データなし表示 */
+.no-data {
+    text-align: center;
+    color: var(--color-text-secondary);
+    padding: 2rem;
+    font-style: italic;
+}
+
+/* レスポンシブ対応追加 */
+@media (max-width: 1023px) {
+    .panel--stats {
+        grid-column: 1;
+    }
+
+    .space-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .planet-card {
+        grid-template-columns: auto 1fr;
+    }
+
+    .planet-card__details {
+        grid-column: span 2;
+        justify-content: flex-start;
+    }
+
+    .planet-card__note {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 767px) {
+    .space-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .space-stat-card__value {
+        font-size: 1.5rem;
+    }
+
+    .constellations-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .planet-card__details {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+}
