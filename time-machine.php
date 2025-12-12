@@ -212,6 +212,10 @@ $galleryBirthdays = getGalleryBirthdays();
             <span class="nav__icon">&#9734;</span>
             TONIGHT
         </a>
+        <a href="help.php" class="nav__link">
+            <span class="nav__icon">&#10067;</span>
+            HELP
+        </a>
     </nav>
 
     <!-- メインコンテンツ -->

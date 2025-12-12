@@ -1,22 +1,10 @@
 <?php
-/**
- * 宇宙コックピット - Space Control Center
- * NOW画面（リアルタイム宇宙監視）
- *
- * MVC構造:
- * - Model: データ取得関数
- * - Controller: 初期データ準備
- * - View: HTML出力
- */
 
-// ========== 設定読み込み ==========
+// 設定読み込み
 require_once __DIR__ . '/config.php';
 
-// ========== MODEL ==========
 
-/**
- * ISS現在位置を取得
- */
+// ISS現在位置を取得
 function getIssLocation() {
     $data = fetchApi(API_ISS_LOCATION);
     if ($data && isset($data['iss_position'])) {
@@ -29,9 +17,7 @@ function getIssLocation() {
     return null;
 }
 
-/**
- * 宇宙飛行士情報を取得
- */
+// 宇宙飛行士情報を取得
 function getAstronauts() {
     $data = fetchApi(API_ASTRONAUTS);
     if ($data && isset($data['people'])) {
@@ -43,9 +29,7 @@ function getAstronauts() {
     return null;
 }
 
-/**
- * 地球接近天体（NEO）を取得
- */
+// 地球接近天体を取得
 function getNearEarthObjects() {
     $startDate = date('Y-m-d');
     $endDate = date('Y-m-d', strtotime('+7 days'));
@@ -80,9 +64,7 @@ function getNearEarthObjects() {
     return null;
 }
 
-/**
- * 今日のNASA APODを取得
- */
+// 今日のNASA APODを取得
 function getTodayApod() {
     $url = API_NASA_APOD . "?api_key=" . NASA_API_KEY;
     $data = fetchApi($url);
@@ -99,9 +81,7 @@ function getTodayApod() {
     return null;
 }
 
-/**
- * 宇宙統計データを取得
- */
+// 宇宙統計データを取得
 function getSpaceStatistics() {
     // 誕生日ギャラリーの保存件数
     $birthdays = loadBirthdays();
@@ -115,7 +95,7 @@ function getSpaceStatistics() {
     $daysSinceLaunch = $issLaunch->diff($now)->days;
     $issOrbits = round($daysSinceLaunch * 15.54); // 1日あたり約15.54周
 
-    // ボイジャー1号の地球からの距離（概算）
+    // ボイジャー1号の地球からの距離
     // 2024年1月時点で約244億km、年間約5億km増加
     $voyagerBaseDist = 24400000000; // km
     $voyagerBaseDate = new DateTime('2024-01-01', new DateTimeZone('UTC'));
@@ -137,8 +117,6 @@ function getSpaceStatistics() {
     ];
 }
 
-// ========== CONTROLLER ==========
-
 // 初期データの取得
 $issLocation = getIssLocation();
 $astronauts = getAstronauts();
@@ -156,7 +134,6 @@ $jsData = [
     'updateInterval' => ISS_UPDATE_INTERVAL
 ];
 
-// ========== VIEW ==========
 ?>
 <!DOCTYPE html>
 <html lang="ja">
@@ -175,7 +152,7 @@ $jsData = [
     <header class="header">
         <div class="header__logo">
             <h1 class="header__title">SPACE CONTROL CENTER</h1>
-            <div class="header__subtitle">宇宙コックピット</div>
+            <div class="header__subtitle">スペース コントロール センター</div>
         </div>
         <div class="header__time">
             <div class="header__time-utc">
@@ -203,6 +180,10 @@ $jsData = [
             <span class="nav__icon">&#9734;</span>
             TONIGHT
         </a>
+        <a href="help.php" class="nav__link">
+            <span class="nav__icon">&#10067;</span>
+            HELP
+        </a>
     </nav>
 
     <!-- メインコンテンツ -->
@@ -211,9 +192,9 @@ $jsData = [
         <div class="page-intro">
             <h2 class="page-intro__title">リアルタイム宇宙モニタリング</h2>
             <p class="page-intro__desc">
-                NOW画面では、国際宇宙ステーション（ISS）の現在位置、宇宙にいる飛行士、
-                地球に接近する小惑星、そしてNASAの今日の天文写真をリアルタイムで確認できます。
-                データは10秒ごとに自動更新されます。
+                NOW画面では，国際宇宙ステーション（ISS）の現在位置，宇宙にいる飛行士，
+                地球に接近する小惑星，そしてNASAの今日の天文写真をリアルタイムで確認できます．
+                データは10秒ごとに自動更新されます．
             </p>
         </div>
 
@@ -230,11 +211,47 @@ $jsData = [
                         LIVE
                     </div>
                 </div>
-                <p class="panel__desc">国際宇宙ステーションは時速約27,600kmで地球を周回しています。現在の位置を追跡します。</p>
+                <p class="panel__desc">国際宇宙ステーションは時速約27,600kmで地球を周回しています．現在の位置を追跡します．</p>
                 <div class="panel__content">
-                    <div class="iss-map" id="iss-map">
-                        <div class="iss-map__globe">
-                            <div class="iss-icon" id="iss-icon"></div>
+                    <!-- ISS ライブ映像 -->
+                    <div class="iss-live-video">
+                        <div class="iss-live-video__toggle">
+                            <button type="button" class="btn btn--secondary iss-view-btn iss-view-btn--active" data-view="video">
+                                <span class="btn__icon">&#127909;</span>
+                                ライブ映像
+                            </button>
+                            <button type="button" class="btn btn--secondary iss-view-btn" data-view="globe">
+                                <span class="btn__icon">&#127760;</span>
+                                位置表示
+                            </button>
+                        </div>
+                        <div class="iss-live-video__container" id="iss-video-container">
+                            <iframe
+                                id="iss-live-iframe"
+                                src="https://ustream.tv/embed/17074538"
+                                title="NASA ISS Live Stream - Earth From Space"
+                                frameborder="0"
+                                allow="autoplay"
+                                allowfullscreen
+                                class="iss-live-video__iframe"
+                            ></iframe>
+                            <div class="iss-live-video__notice">
+                                <span class="iss-live-video__notice-icon">&#128246;</span>
+                                <span>ISSが地球の夜側にいる時は映像が暗くなります．通信途絶時はブルー画面や録画映像が表示されることがあります．OFF-AIRと表示される場合は配信が行われていません．以下のリンクからご確認ください．</span>
+                            </div>
+                            <div class="iss-live-video__links">
+                                <a href="https://eol.jsc.nasa.gov/ESRS/HDEV/" target="_blank" rel="noopener" class="iss-live-video__link">
+                                    NASA公式ページで視聴
+                                </a>
+                                <a href="https://www.nasa.gov/live/" target="_blank" rel="noopener" class="iss-live-video__link">
+                                    NASA Live
+                                </a>
+                            </div>
+                        </div>
+                        <div class="iss-map" id="iss-map" style="display: none;">
+                            <div class="iss-map__globe">
+                                <div class="iss-icon" id="iss-icon"></div>
+                            </div>
                         </div>
                     </div>
                     <div class="iss-data">
@@ -269,7 +286,7 @@ $jsData = [
                         <?= $astronauts ? h($astronauts['number']) : '--' ?> 人
                     </div>
                 </div>
-                <p class="panel__desc">現在、宇宙空間で活動している全ての宇宙飛行士と所属する宇宙船を表示します。</p>
+                <p class="panel__desc">現在，宇宙空間で活動している全ての宇宙飛行士と所属する宇宙船を表示します．</p>
                 <div class="panel__content">
                     <ul class="astronaut-list" id="astronaut-list">
                         <?php if ($astronauts && !empty($astronauts['people'])): ?>
@@ -295,7 +312,7 @@ $jsData = [
                     </h2>
                     <div class="panel__badge">今週TOP5</div>
                 </div>
-                <p class="panel__desc">今週地球に最も接近する小惑星TOP5。赤い警告は潜在的に危険な天体を示します。</p>
+                <p class="panel__desc">今週地球に最も接近する小惑星TOP5．赤い警告はちょっと危険な天体を示します．</p>
                 <div class="panel__content">
                     <div class="neo-list" id="neo-list">
                         <?php if ($nearEarthObjects && !empty($nearEarthObjects)): ?>
@@ -345,7 +362,7 @@ $jsData = [
                         <?= $todayApod ? h($todayApod['date']) : '--' ?>
                     </div>
                 </div>
-                <p class="panel__desc">NASAが毎日公開する天文学的な写真や画像。1995年から続く人気プログラムです。</p>
+                <p class="panel__desc">NASAが毎日公開する天文学的な写真や画像です．1995年より開始されたため，それ以前の者は取得できません．</p>
                 <div class="panel__content">
                     <?php if ($todayApod): ?>
                         <div class="apod">

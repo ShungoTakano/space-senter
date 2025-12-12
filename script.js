@@ -504,7 +504,39 @@ function smoothScrollTo(element) {
     });
 }
 
-// ========== 8. 初期化処理 ==========
+// ========== 8. ISS表示切り替え ==========
+
+/**
+ * ISS表示モードを切り替え（ライブ映像 / 位置表示）
+ */
+function setupIssViewToggle() {
+    const viewBtns = document.querySelectorAll('.iss-view-btn');
+    const videoContainer = document.getElementById('iss-video-container');
+    const mapContainer = document.getElementById('iss-map');
+
+    if (!viewBtns.length || !videoContainer || !mapContainer) return;
+
+    viewBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const view = btn.dataset.view;
+
+            // ボタンのアクティブ状態を更新
+            viewBtns.forEach(b => b.classList.remove('iss-view-btn--active'));
+            btn.classList.add('iss-view-btn--active');
+
+            // 表示を切り替え
+            if (view === 'video') {
+                videoContainer.style.display = 'block';
+                mapContainer.style.display = 'none';
+            } else {
+                videoContainer.style.display = 'none';
+                mapContainer.style.display = 'flex';
+            }
+        });
+    });
+}
+
+// ========== 9. 初期化処理 ==========
 
 document.addEventListener('DOMContentLoaded', () => {
     // 時計を開始
@@ -526,6 +558,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // ISS自動更新を開始
             startIssUpdates();
         }
+        // ISS表示切り替えのセットアップ
+        setupIssViewToggle();
     }
 
     // TIME MACHINE画面
