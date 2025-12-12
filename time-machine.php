@@ -1,22 +1,10 @@
 <?php
-/**
- * 宇宙コックピット - Space Control Center
- * TIME MACHINE画面（時空を超える）
- *
- * MVC構造:
- * - Model: データ取得・保存関数
- * - Controller: リクエスト処理
- * - View: HTML出力
- */
 
-// ========== 設定読み込み ==========
+
+// 設定読み込み
 require_once __DIR__ . '/config.php';
 
-// ========== MODEL ==========
-
-/**
- * 指定日付のAPODを取得（キャッシュチェック付き）
- */
+// 指定日付のAPODを取得
 function getApodByDate($date) {
     // まずキャッシュ（保存済み誕生日）をチェック
     $birthdays = loadBirthdays();
@@ -43,9 +31,8 @@ function getApodByDate($date) {
     return null;
 }
 
-/**
- * 誕生日を保存
- */
+// 誕生日を保存
+
 function saveBirthday($nickname, $date, $apodData) {
     $birthdays = loadBirthdays();
 
@@ -184,7 +171,7 @@ $galleryBirthdays = getGalleryBirthdays();
     <header class="header">
         <div class="header__logo">
             <h1 class="header__title">SPACE CONTROL CENTER</h1>
-            <div class="header__subtitle">宇宙コックピット</div>
+            <div class="header__subtitle">スペース コントロール センター</div>
         </div>
         <div class="header__time">
             <div class="header__time-utc">

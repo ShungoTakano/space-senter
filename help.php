@@ -1,13 +1,8 @@
 <?php
-/**
- * 宇宙コックピット - Space Control Center
- * HELP画面（操作説明・API説明）
- */
 
-// ========== 設定読み込み ==========
+// 設定読み込み
 require_once __DIR__ . '/config.php';
 
-// ========== VIEW ==========
 ?>
 <!DOCTYPE html>
 <html lang="ja">
@@ -26,7 +21,7 @@ require_once __DIR__ . '/config.php';
     <header class="header">
         <div class="header__logo">
             <h1 class="header__title">SPACE CONTROL CENTER</h1>
-            <div class="header__subtitle">宇宙コックピット</div>
+            <div class="header__subtitle">スペース コントロール センター</div>
         </div>
         <div class="header__time">
             <div class="header__time-utc">
@@ -415,7 +410,7 @@ require_once __DIR__ . '/config.php';
         </div>
     </main>
 
-    <!-- フッター -->
+    <!-- フッター 
     <footer class="footer">
         <div class="footer__credits">
             <p>Data provided by NASA, Open Notify API, Sunrise-Sunset.org</p>
@@ -424,6 +419,7 @@ require_once __DIR__ . '/config.php';
             <p>Space Control Center - 宇宙コックピット</p>
         </div>
     </footer>
+    -->
 
     <!-- JavaScript -->
     <script src="script.js"></script>

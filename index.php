@@ -399,7 +399,7 @@ $jsData = [
                     </h2>
                     <div class="panel__badge">リアルタイム</div>
                 </div>
-                <p class="panel__desc">宇宙探査に関する興味深い統計データ。数値は概算値です。</p>
+                <p class="panel__desc">今の宇宙に関する統計データです．数値は概算値です．</p>
                 <div class="panel__content">
                     <div class="space-stats">
                         <div class="space-stat-card">
@@ -432,7 +432,7 @@ $jsData = [
         </div>
     </main>
 
-    <!-- フッター -->
+    <!-- フッター
     <footer class="footer">
         <div class="footer__credits">
             <p>Data provided by NASA, Open Notify API, Sunrise-Sunset.org</p>
@@ -441,6 +441,7 @@ $jsData = [
             <p>Space Control Center - 宇宙コックピット</p>
         </div>
     </footer>
+    -->
 
     <!-- JavaScript -->
     <script>
