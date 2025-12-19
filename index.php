@@ -1,146 +1,439 @@
 <?php
+/**
+ * 宇宙コックピット - Space Control Center
+ * TONIGHT画面（今夜の観測ガイド）
+ *
+ * MVC構造:
+ * - Model: データ取得関数
+ * - Controller: 初期データ準備
+ * - View: HTML出力
+ */
 
-// 設定読み込み
+// ========== 設定読み込み ==========
 require_once __DIR__ . '/config.php';
 
+// ========== MODEL ==========
 
-// ISS現在位置を取得
-function getIssLocation() {
-    $data = fetchApi(API_ISS_LOCATION);
-    if ($data && isset($data['iss_position'])) {
-        return [
-            'latitude' => floatval($data['iss_position']['latitude']),
-            'longitude' => floatval($data['iss_position']['longitude']),
-            'timestamp' => $data['timestamp']
-        ];
-    }
-    return null;
-}
-
-// 宇宙飛行士情報を取得
-function getAstronauts() {
-    $data = fetchApi(API_ASTRONAUTS);
-    if ($data && isset($data['people'])) {
-        return [
-            'number' => $data['number'],
-            'people' => $data['people']
-        ];
-    }
-    return null;
-}
-
-// 地球接近天体を取得
-function getNearEarthObjects() {
-    $startDate = date('Y-m-d');
-    $endDate = date('Y-m-d', strtotime('+7 days'));
-    $url = API_NASA_NEO . "?start_date={$startDate}&end_date={$endDate}&api_key=" . NASA_API_KEY;
-
+/**
+ * 日没・日の出情報を取得
+ */
+function getSunriseSunset($lat, $lon, $date = null) {
+    $date = $date ?? date('Y-m-d');
+    $url = API_SUNRISE_SUNSET . "?lat={$lat}&lng={$lon}&date={$date}&formatted=0";
     $data = fetchApi($url);
-    if ($data && isset($data['near_earth_objects'])) {
-        $allNeos = [];
-        foreach ($data['near_earth_objects'] as $date => $neos) {
-            foreach ($neos as $neo) {
-                $approachData = $neo['close_approach_data'][0] ?? null;
-                if ($approachData) {
-                    $allNeos[] = [
-                        'name' => $neo['name'],
-                        'id' => $neo['id'],
-                        'date' => $approachData['close_approach_date'],
-                        'distance_km' => floatval($approachData['miss_distance']['kilometers']),
-                        'velocity_kmh' => floatval($approachData['relative_velocity']['kilometers_per_hour']),
-                        'diameter_min' => $neo['estimated_diameter']['meters']['estimated_diameter_min'],
-                        'diameter_max' => $neo['estimated_diameter']['meters']['estimated_diameter_max'],
-                        'is_hazardous' => $neo['is_potentially_hazardous_asteroid']
-                    ];
-                }
-            }
+
+    if ($data && isset($data['results'])) {
+        return [
+            'sunrise' => $data['results']['sunrise'] ?? null,
+            'sunset' => $data['results']['sunset'] ?? null,
+            'solar_noon' => $data['results']['solar_noon'] ?? null,
+            'day_length' => $data['results']['day_length'] ?? null,
+            'civil_twilight_begin' => $data['results']['civil_twilight_begin'] ?? null,
+            'civil_twilight_end' => $data['results']['civil_twilight_end'] ?? null,
+            'nautical_twilight_begin' => $data['results']['nautical_twilight_begin'] ?? null,
+            'nautical_twilight_end' => $data['results']['nautical_twilight_end'] ?? null,
+            'astronomical_twilight_begin' => $data['results']['astronomical_twilight_begin'] ?? null,
+            'astronomical_twilight_end' => $data['results']['astronomical_twilight_end'] ?? null
+        ];
+    }
+    return null;
+}
+
+/**
+ * ISS通過時刻を取得
+ * 注意: Open Notify APIのiss-passエンドポイントは現在利用不可の場合があります
+ * その場合は計算で代替表示を行います
+ */
+function getIssPassTimes($lat, $lon, $n = 5) {
+    $url = API_ISS_PASS . "?lat={$lat}&lon={$lon}&n={$n}";
+    $data = fetchApi($url);
+
+    if ($data && isset($data['response'])) {
+        $passes = [];
+        foreach ($data['response'] as $pass) {
+            $passes[] = [
+                'risetime' => $pass['risetime'],
+                'duration' => $pass['duration']
+            ];
         }
-        // 距離でソートしてTOP5を取得
-        usort($allNeos, function ($a, $b) {
-            return $a['distance_km'] <=> $b['distance_km'];
-        });
-        return array_slice($allNeos, 0, 5);
+        return $passes;
     }
     return null;
 }
 
-// 今日のNASA APODを取得
-function getTodayApod() {
-    $url = API_NASA_APOD . "?api_key=" . NASA_API_KEY;
-    $data = fetchApi($url);
-    if ($data && isset($data['url'])) {
-        return [
-            'title' => $data['title'] ?? '',
-            'date' => $data['date'] ?? '',
-            'explanation' => $data['explanation'] ?? '',
-            'url' => $data['url'] ?? '',
-            'hdurl' => $data['hdurl'] ?? $data['url'] ?? '',
-            'media_type' => $data['media_type'] ?? 'image'
-        ];
+/**
+ * 月齢を計算（簡易版）
+ */
+function getMoonPhase($date = null) {
+    $date = $date ?? date('Y-m-d');
+    $timestamp = strtotime($date);
+
+    // 2000年1月6日の新月を基準
+    $knownNewMoon = strtotime('2000-01-06');
+    $lunarCycle = 29.530588853; // 日数
+
+    $daysSinceNewMoon = ($timestamp - $knownNewMoon) / 86400;
+    $currentAge = fmod($daysSinceNewMoon, $lunarCycle);
+    if ($currentAge < 0) $currentAge += $lunarCycle;
+
+    // 月齢から月相を判定
+    $phase = '';
+    $illumination = 0;
+
+    if ($currentAge < 1.85) {
+        $phase = '新月';
+        $illumination = 0;
+    } elseif ($currentAge < 7.38) {
+        $phase = '三日月（上弦へ）';
+        $illumination = round(($currentAge / 14.77) * 100);
+    } elseif ($currentAge < 9.23) {
+        $phase = '上弦の月';
+        $illumination = 50;
+    } elseif ($currentAge < 14.77) {
+        $phase = '十三夜月';
+        $illumination = round(($currentAge / 14.77) * 100);
+    } elseif ($currentAge < 16.61) {
+        $phase = '満月';
+        $illumination = 100;
+    } elseif ($currentAge < 22.15) {
+        $phase = '十六夜月';
+        $illumination = round(100 - (($currentAge - 14.77) / 14.77) * 100);
+    } elseif ($currentAge < 24.00) {
+        $phase = '下弦の月';
+        $illumination = 50;
+    } else {
+        $phase = '二十六夜月';
+        $illumination = round(100 - (($currentAge - 14.77) / 14.77) * 100);
     }
-    return null;
-}
-
-// 宇宙統計データを取得
-function getSpaceStatistics() {
-    // 誕生日ギャラリーの保存件数
-    $birthdays = loadBirthdays();
-    $savedBirthdays = count($birthdays['birthdays']);
-
-    // 現在の日時情報
-    $now = new DateTime('now', new DateTimeZone('UTC'));
-
-    // ISSの累計周回数（1998年11月20日から）
-    $issLaunch = new DateTime('1998-11-20', new DateTimeZone('UTC'));
-    $daysSinceLaunch = $issLaunch->diff($now)->days;
-    $issOrbits = round($daysSinceLaunch * 15.54); // 1日あたり約15.54周
-
-    // ボイジャー1号の地球からの距離
-    // 2024年1月時点で約244億km、年間約5億km増加
-    $voyagerBaseDist = 24400000000; // km
-    $voyagerBaseDate = new DateTime('2024-01-01', new DateTimeZone('UTC'));
-    $daysSinceBase = $voyagerBaseDate->diff($now)->days;
-    $voyagerDistance = $voyagerBaseDist + ($daysSinceBase * 1369863); // 1日あたり約137万km
-
-    // 光年での距離
-    $lightYear = 9460730472580.8; // km
-    $voyagerLightYears = $voyagerDistance / $lightYear;
 
     return [
-        'saved_birthdays' => $savedBirthdays,
-        'iss_orbits' => $issOrbits,
-        'iss_days_in_space' => $daysSinceLaunch,
-        'voyager_distance_km' => $voyagerDistance,
-        'voyager_distance_au' => round($voyagerDistance / 149597870.7, 2), // AU
-        'voyager_light_hours' => round(($voyagerDistance / 299792.458) / 3600, 1), // 光時間
-        'current_utc' => $now->format('Y-m-d H:i:s')
+        'age' => round($currentAge, 1),
+        'phase' => $phase,
+        'illumination' => max(0, min(100, $illumination))
     ];
 }
 
-// 初期データの取得
-$issLocation = getIssLocation();
-$astronauts = getAstronauts();
-$nearEarthObjects = getNearEarthObjects();
-$todayApod = getTodayApod();
-$spaceStats = getSpaceStatistics();
+/**
+ * 観測条件スコアを計算
+ */
+function calculateObservationScore($moonPhase) {
+    // 月齢による減点（満月に近いほど星が見えにくい）
+    $moonScore = 5 - round(($moonPhase['illumination'] / 100) * 3);
 
-// JavaScript用のデータをJSON化
+    return [
+        'total' => max(1, min(5, $moonScore)),
+        'moon_impact' => $moonPhase['illumination'] > 70 ? '月明かりが強い' : ($moonPhase['illumination'] > 30 ? '月明かりあり' : '月明かり弱い')
+    ];
+}
+
+/**
+ * 今夜見える惑星情報を取得（簡易計算）
+ */
+function getVisiblePlanets($date = null) {
+    $date = $date ?? date('Y-m-d');
+    $month = intval(date('n', strtotime($date)));
+    $dayOfYear = intval(date('z', strtotime($date)));
+
+    // 惑星の可視性データ（季節と時刻に基づく簡易版）
+    $planets = [
+        [
+            'name' => '金星',
+            'name_en' => 'Venus',
+            'symbol' => '♀',
+            'magnitude' => -4.5,
+            'visible' => true,
+            'best_time' => ($month >= 1 && $month <= 5) ? '明け方' : '夕方',
+            'direction' => ($month >= 1 && $month <= 5) ? '東' : '西',
+            'note' => '最も明るい惑星。肉眼で簡単に見える'
+        ],
+        [
+            'name' => '火星',
+            'name_en' => 'Mars',
+            'symbol' => '♂',
+            'magnitude' => 0.5,
+            'visible' => ($month % 2 == 0),
+            'best_time' => '深夜',
+            'direction' => '南',
+            'note' => '赤く輝く惑星'
+        ],
+        [
+            'name' => '木星',
+            'name_en' => 'Jupiter',
+            'symbol' => '♃',
+            'magnitude' => -2.5,
+            'visible' => true,
+            'best_time' => ($month >= 9 || $month <= 3) ? '夜半' : '明け方',
+            'direction' => ($month >= 9 || $month <= 3) ? '南' : '東',
+            'note' => '金星に次いで明るい惑星'
+        ],
+        [
+            'name' => '土星',
+            'name_en' => 'Saturn',
+            'symbol' => '♄',
+            'magnitude' => 0.5,
+            'visible' => ($month >= 6 && $month <= 12),
+            'best_time' => '夜半',
+            'direction' => '南',
+            'note' => '環が美しい惑星（望遠鏡推奨）'
+        ],
+        [
+            'name' => '水星',
+            'name_en' => 'Mercury',
+            'symbol' => '☿',
+            'magnitude' => 0.0,
+            'visible' => ($dayOfYear % 30 < 10),
+            'best_time' => '日没直後または日の出直前',
+            'direction' => '西または東（低空）',
+            'note' => '観測が難しい惑星'
+        ]
+    ];
+
+    return array_filter($planets, function($p) { return $p['visible']; });
+}
+
+/**
+ * 今夜見える主な星座を取得
+ */
+function getVisibleConstellations($date = null) {
+    $date = $date ?? date('Y-m-d');
+    $month = intval(date('n', strtotime($date)));
+
+    // 季節ごとの代表的な星座
+    $constellations = [
+        // 冬（12-2月）
+        [
+            'name' => 'オリオン座',
+            'name_en' => 'Orion',
+            'season' => [12, 1, 2],
+            'main_star' => 'ベテルギウス、リゲル',
+            'direction' => '南',
+            'difficulty' => '簡単',
+            'description' => '冬の代表的な星座。三つ星が目印'
+        ],
+        [
+            'name' => 'おおいぬ座',
+            'name_en' => 'Canis Major',
+            'season' => [12, 1, 2],
+            'main_star' => 'シリウス（全天で最も明るい恒星）',
+            'direction' => '南東',
+            'difficulty' => '簡単',
+            'description' => '全天一明るいシリウスが輝く'
+        ],
+        [
+            'name' => 'ふたご座',
+            'name_en' => 'Gemini',
+            'season' => [12, 1, 2, 3],
+            'main_star' => 'カストル、ポルックス',
+            'direction' => '南〜天頂',
+            'difficulty' => '普通',
+            'description' => '二つの明るい星が並ぶ'
+        ],
+        // 春（3-5月）
+        [
+            'name' => 'しし座',
+            'name_en' => 'Leo',
+            'season' => [3, 4, 5],
+            'main_star' => 'レグルス',
+            'direction' => '南',
+            'difficulty' => '普通',
+            'description' => '？マークを逆にした形が目印'
+        ],
+        [
+            'name' => 'おとめ座',
+            'name_en' => 'Virgo',
+            'season' => [4, 5, 6],
+            'main_star' => 'スピカ',
+            'direction' => '南東',
+            'difficulty' => '普通',
+            'description' => '春の大三角の一つ'
+        ],
+        [
+            'name' => 'うしかい座',
+            'name_en' => 'Boötes',
+            'season' => [4, 5, 6],
+            'main_star' => 'アークトゥルス',
+            'direction' => '東〜南',
+            'difficulty' => '簡単',
+            'description' => 'オレンジ色に輝くアークトゥルス'
+        ],
+        // 夏（6-8月）
+        [
+            'name' => 'こと座',
+            'name_en' => 'Lyra',
+            'season' => [6, 7, 8, 9],
+            'main_star' => 'ベガ（織姫星）',
+            'direction' => '天頂付近',
+            'difficulty' => '簡単',
+            'description' => '夏の大三角の一つ'
+        ],
+        [
+            'name' => 'わし座',
+            'name_en' => 'Aquila',
+            'season' => [6, 7, 8, 9],
+            'main_star' => 'アルタイル（彦星）',
+            'direction' => '南〜天頂',
+            'difficulty' => '簡単',
+            'description' => '夏の大三角の一つ'
+        ],
+        [
+            'name' => 'はくちょう座',
+            'name_en' => 'Cygnus',
+            'season' => [6, 7, 8, 9],
+            'main_star' => 'デネブ',
+            'direction' => '天頂付近',
+            'difficulty' => '簡単',
+            'description' => '十字形が目印、夏の大三角の一つ'
+        ],
+        [
+            'name' => 'さそり座',
+            'name_en' => 'Scorpius',
+            'season' => [6, 7, 8],
+            'main_star' => 'アンタレス',
+            'direction' => '南（低空）',
+            'difficulty' => '簡単',
+            'description' => '赤く輝くアンタレスが目印'
+        ],
+        // 秋（9-11月）
+        [
+            'name' => 'ペガスス座',
+            'name_en' => 'Pegasus',
+            'season' => [9, 10, 11],
+            'main_star' => 'ペガススの大四辺形',
+            'direction' => '天頂付近',
+            'difficulty' => '普通',
+            'description' => '大きな四角形が目印'
+        ],
+        [
+            'name' => 'アンドロメダ座',
+            'name_en' => 'Andromeda',
+            'season' => [9, 10, 11],
+            'main_star' => 'アンドロメダ銀河（M31）',
+            'direction' => '北東〜天頂',
+            'difficulty' => '普通',
+            'description' => '肉眼で見える最も遠い天体'
+        ],
+        [
+            'name' => 'カシオペヤ座',
+            'name_en' => 'Cassiopeia',
+            'season' => [9, 10, 11, 12],
+            'main_star' => 'W字型の5つの星',
+            'direction' => '北',
+            'difficulty' => '簡単',
+            'description' => '一年中見えるがこの時期が見頃'
+        ],
+        // 通年
+        [
+            'name' => '北斗七星（おおぐま座）',
+            'name_en' => 'Ursa Major',
+            'season' => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+            'main_star' => '北斗七星',
+            'direction' => '北',
+            'difficulty' => '簡単',
+            'description' => '北極星を探す目印'
+        ]
+    ];
+
+    // 現在の月に見える星座をフィルタ
+    return array_filter($constellations, function($c) use ($month) {
+        return in_array($month, $c['season']);
+    });
+}
+
+/**
+ * 季節の天文イベントを取得
+ */
+function getUpcomingEvents($date = null) {
+    $date = $date ?? date('Y-m-d');
+    $year = intval(date('Y', strtotime($date)));
+    $currentTimestamp = strtotime($date);
+
+    // 主な天文イベント（年間固定のもの）
+    $events = [
+        ['date' => "$year-01-04", 'name' => 'しぶんぎ座流星群', 'type' => '流星群'],
+        ['date' => "$year-04-22", 'name' => 'こと座流星群', 'type' => '流星群'],
+        ['date' => "$year-05-06", 'name' => 'みずがめ座η流星群', 'type' => '流星群'],
+        ['date' => "$year-08-12", 'name' => 'ペルセウス座流星群', 'type' => '流星群'],
+        ['date' => "$year-10-21", 'name' => 'オリオン座流星群', 'type' => '流星群'],
+        ['date' => "$year-11-17", 'name' => 'しし座流星群', 'type' => '流星群'],
+        ['date' => "$year-12-14", 'name' => 'ふたご座流星群', 'type' => '流星群'],
+        ['date' => "$year-03-20", 'name' => '春分の日', 'type' => '季節'],
+        ['date' => "$year-06-21", 'name' => '夏至', 'type' => '季節'],
+        ['date' => "$year-09-23", 'name' => '秋分の日', 'type' => '季節'],
+        ['date' => "$year-12-22", 'name' => '冬至', 'type' => '季節'],
+    ];
+
+    // 今後30日以内のイベントをフィルタ
+    $upcoming = [];
+    foreach ($events as $event) {
+        $eventTimestamp = strtotime($event['date']);
+        $daysUntil = ($eventTimestamp - $currentTimestamp) / 86400;
+        if ($daysUntil >= 0 && $daysUntil <= 30) {
+            $event['days_until'] = intval($daysUntil);
+            $upcoming[] = $event;
+        }
+    }
+
+    // 日付でソート
+    usort($upcoming, function($a, $b) {
+        return strtotime($a['date']) <=> strtotime($b['date']);
+    });
+
+    return $upcoming;
+}
+
+// ========== CONTROLLER ==========
+
+// デフォルト位置（東京）を使用（JavaScript側で位置情報を取得して更新）
+$lat = DEFAULT_LAT;
+$lon = DEFAULT_LON;
+$locationName = '東京（デフォルト）';
+
+// 今日の日没・日の出
+$sunData = getSunriseSunset($lat, $lon);
+// 明日の日の出
+$tomorrowDate = date('Y-m-d', strtotime('+1 day'));
+$tomorrowSunData = getSunriseSunset($lat, $lon, $tomorrowDate);
+
+// 月齢
+$moonPhase = getMoonPhase();
+
+// 観測スコア
+$observationScore = calculateObservationScore($moonPhase);
+
+// ISS通過時刻（APIが利用可能な場合）
+$issPasses = getIssPassTimes($lat, $lon);
+
+// 今夜見える惑星
+$visiblePlanets = getVisiblePlanets();
+
+// 今夜見える星座
+$visibleConstellations = getVisibleConstellations();
+
+// 今後の天文イベント
+$upcomingEvents = getUpcomingEvents();
+
+// JavaScript用データ
 $jsData = [
-    'issLocation' => $issLocation,
-    'astronauts' => $astronauts,
-    'nearEarthObjects' => $nearEarthObjects,
-    'todayApod' => $todayApod,
-    'spaceStats' => $spaceStats,
-    'updateInterval' => ISS_UPDATE_INTERVAL
+    'defaultLat' => DEFAULT_LAT,
+    'defaultLon' => DEFAULT_LON,
+    'sunData' => $sunData,
+    'tomorrowSunData' => $tomorrowSunData,
+    'moonPhase' => $moonPhase,
+    'observationScore' => $observationScore,
+    'issPasses' => $issPasses,
+    'visiblePlanets' => array_values($visiblePlanets),
+    'visibleConstellations' => array_values($visibleConstellations),
+    'upcomingEvents' => $upcomingEvents
 ];
 
+// ========== VIEW ==========
 ?>
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NOW - Space Control Center</title>
+    <title>TONIGHT - Space Control Center</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -152,7 +445,7 @@ $jsData = [
     <header class="header">
         <div class="header__logo">
             <h1 class="header__title">SPACE CONTROL CENTER</h1>
-            <div class="header__subtitle">スペース コントロール センター</div>
+            <div class="header__subtitle">宇宙コックピット</div>
         </div>
         <div class="header__time">
             <div class="header__time-utc">
@@ -168,7 +461,7 @@ $jsData = [
 
     <!-- ナビゲーション -->
     <nav class="nav">
-        <a href="index.php" class="nav__link nav__link--active">
+        <a href="index.php" class="nav__link">
             <span class="nav__icon">&#9679;</span>
             NOW
         </a>
@@ -176,7 +469,7 @@ $jsData = [
             <span class="nav__icon">&#8987;</span>
             TIME MACHINE
         </a>
-        <a href="tonight.php" class="nav__link">
+        <a href="tonight.php" class="nav__link nav__link--active">
             <span class="nav__icon">&#9734;</span>
             TONIGHT
         </a>
@@ -190,249 +483,358 @@ $jsData = [
     <main class="main">
         <!-- 画面説明 -->
         <div class="page-intro">
-            <h2 class="page-intro__title">リアルタイム宇宙モニタリング</h2>
+            <h2 class="page-intro__title">今夜の観測ガイド</h2>
             <p class="page-intro__desc">
-                NOW画面では，国際宇宙ステーション（ISS）の現在位置，宇宙にいる飛行士，
-                地球に接近する小惑星，そしてNASAの今日の天文写真をリアルタイムで確認できます．
-                データは10秒ごとに自動更新されます．
+                今夜の天体観測に最適な情報をお届けします。日没・日の出時刻、月齢、ISSの通過時刻、
+                そして観測条件のスコアを確認できます。位置情報を許可すると、あなたの場所に合わせた情報が表示されます。
             </p>
         </div>
 
-        <div class="dashboard">
-            <!-- ISSトラッカー -->
-            <section class="panel panel--iss">
-                <div class="panel__header">
-                    <h2 class="panel__title">
-                        <span class="panel__icon">&#128752;</span>
-                        ISS LIVE TRACKER
-                    </h2>
-                    <div class="panel__status">
-                        <span class="status-dot status-dot--live"></span>
-                        LIVE
-                    </div>
-                </div>
-                <p class="panel__desc">国際宇宙ステーションは時速約27,600kmで地球を周回しています．現在の位置を追跡します．</p>
-                <div class="panel__content">
-                    <!-- ISS ライブ映像 -->
-                    <div class="iss-live-video">
-                        <div class="iss-live-video__toggle">
-                            <button type="button" class="btn btn--secondary iss-view-btn iss-view-btn--active" data-view="video">
-                                <span class="btn__icon">&#127909;</span>
-                                ライブ映像
-                            </button>
-                            <button type="button" class="btn btn--secondary iss-view-btn" data-view="globe">
-                                <span class="btn__icon">&#127760;</span>
-                                位置表示
-                            </button>
-                        </div>
-                        <div class="iss-live-video__container" id="iss-video-container">
-                            <iframe
-                                id="iss-live-iframe"
-                                src="https://ustream.tv/embed/17074538"
-                                title="NASA ISS Live Stream - Earth From Space"
-                                frameborder="0"
-                                allow="autoplay"
-                                allowfullscreen
-                                class="iss-live-video__iframe"
-                            ></iframe>
-                            <div class="iss-live-video__notice">
-                                <span class="iss-live-video__notice-icon">&#128246;</span>
-                                <span>ISSが地球の夜側にいる時は映像が暗くなります．通信途絶時はブルー画面や録画映像が表示されることがあります．OFF-AIRと表示される場合は配信が行われていません．以下のリンクからご確認ください．</span>
-                            </div>
-                            <div class="iss-live-video__links">
-                                <a href="https://eol.jsc.nasa.gov/ESRS/HDEV/" target="_blank" rel="noopener" class="iss-live-video__link">
-                                    NASA公式ページで視聴
-                                </a>
-                                <a href="https://www.nasa.gov/live/" target="_blank" rel="noopener" class="iss-live-video__link">
-                                    NASA Live
-                                </a>
-                            </div>
-                        </div>
-                        <div class="iss-map" id="iss-map" style="display: none;">
-                            <div class="iss-map__globe">
-                                <div class="iss-icon" id="iss-icon"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="iss-data">
-                        <div class="iss-data__row">
-                            <span class="iss-data__label">緯度</span>
-                            <span class="iss-data__value" id="iss-lat"><?= $issLocation ? h(number_format($issLocation['latitude'], 4)) : '--' ?>°</span>
-                        </div>
-                        <div class="iss-data__row">
-                            <span class="iss-data__label">経度</span>
-                            <span class="iss-data__value" id="iss-lon"><?= $issLocation ? h(number_format($issLocation['longitude'], 4)) : '--' ?>°</span>
-                        </div>
-                        <div class="iss-data__row">
-                            <span class="iss-data__label">高度</span>
-                            <span class="iss-data__value">約 408 km</span>
-                        </div>
-                        <div class="iss-data__row">
-                            <span class="iss-data__label">速度</span>
-                            <span class="iss-data__value">約 27,600 km/h</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
+        <div class="tonight">
+            <!-- 位置情報ステータス -->
+            <div class="location-status" id="location-status">
+                <span class="location-status__icon">&#128205;</span>
+                <span class="location-status__text" id="location-text"><?= h($locationName) ?></span>
+                <button class="location-status__btn" id="get-location-btn">位置情報を取得</button>
+            </div>
 
-            <!-- 宇宙飛行士 -->
-            <section class="panel panel--astronauts">
+            <div class="tonight__grid">
+                <!-- 日没・日の出情報 -->
+                <section class="panel panel--sun">
+                    <div class="panel__header">
+                        <h2 class="panel__title">
+                            <span class="panel__icon">&#127773;</span>
+                            日没・日の出
+                        </h2>
+                    </div>
+                    <p class="panel__desc">今日の日没と明日の日の出時刻。天体観測に最適な暗闘時間を確認できます。</p>
+                    <div class="panel__content">
+                        <div class="sun-times">
+                            <div class="sun-time sun-time--sunset">
+                                <div class="sun-time__icon">&#127774;</div>
+                                <div class="sun-time__info">
+                                    <div class="sun-time__label">今日の日没</div>
+                                    <div class="sun-time__value" id="sunset-time">
+                                        <?php if ($sunData && $sunData['sunset']): ?>
+                                            <?= h(date('H:i', strtotime($sunData['sunset']))) ?>
+                                        <?php else: ?>
+                                            --:--
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="sun-time sun-time--sunrise">
+                                <div class="sun-time__icon">&#127749;</div>
+                                <div class="sun-time__info">
+                                    <div class="sun-time__label">明日の日の出</div>
+                                    <div class="sun-time__value" id="sunrise-time">
+                                        <?php if ($tomorrowSunData && $tomorrowSunData['sunrise']): ?>
+                                            <?= h(date('H:i', strtotime($tomorrowSunData['sunrise']))) ?>
+                                        <?php else: ?>
+                                            --:--
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="darkness-countdown">
+                            <div class="darkness-countdown__label">完全な暗闘まで</div>
+                            <div class="darkness-countdown__value" id="darkness-countdown">計算中...</div>
+                        </div>
+
+                        <div class="observation-window">
+                            <div class="observation-window__label">天体観測ベストタイム</div>
+                            <div class="observation-window__value" id="best-time">
+                                <?php if ($sunData && $sunData['astronomical_twilight_end'] && $tomorrowSunData && $tomorrowSunData['astronomical_twilight_begin']): ?>
+                                    <?= h(date('H:i', strtotime($sunData['astronomical_twilight_end']))) ?> 〜
+                                    <?= h(date('H:i', strtotime($tomorrowSunData['astronomical_twilight_begin']))) ?>
+                                <?php else: ?>
+                                    --:-- 〜 --:--
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 月齢情報 -->
+                <section class="panel panel--moon">
+                    <div class="panel__header">
+                        <h2 class="panel__title">
+                            <span class="panel__icon">&#127769;</span>
+                            今夜の月
+                        </h2>
+                    </div>
+                    <p class="panel__desc">現在の月齢と月相。満月に近いほど月明かりが強く、暗い天体の観測は難しくなります。</p>
+                    <div class="panel__content">
+                        <div class="moon-info">
+                            <div class="moon-visual" id="moon-visual">
+                                <div class="moon-visual__circle" style="--illumination: <?= h($moonPhase['illumination']) ?>%"></div>
+                            </div>
+                            <div class="moon-data">
+                                <div class="moon-data__row">
+                                    <span class="moon-data__label">月齢</span>
+                                    <span class="moon-data__value"><?= h($moonPhase['age']) ?></span>
+                                </div>
+                                <div class="moon-data__row">
+                                    <span class="moon-data__label">月相</span>
+                                    <span class="moon-data__value"><?= h($moonPhase['phase']) ?></span>
+                                </div>
+                                <div class="moon-data__row">
+                                    <span class="moon-data__label">輝面比</span>
+                                    <span class="moon-data__value"><?= h($moonPhase['illumination']) ?>%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ISS観測チャンス -->
+                <section class="panel panel--iss-pass">
+                    <div class="panel__header">
+                        <h2 class="panel__title">
+                            <span class="panel__icon">&#128752;</span>
+                            ISS観測チャンス
+                        </h2>
+                    </div>
+                    <p class="panel__desc">ISSが夜空を通過する時刻。晴れた夜なら肉眼でも明るく動く光点として観測できます。</p>
+                    <div class="panel__content">
+                        <div class="iss-passes" id="iss-passes">
+                            <?php if ($issPasses && !empty($issPasses)): ?>
+                                <?php foreach ($issPasses as $index => $pass): ?>
+                                    <div class="iss-pass">
+                                        <div class="iss-pass__time">
+                                            <?= h(date('Y/m/d H:i', $pass['risetime'])) ?>
+                                        </div>
+                                        <div class="iss-pass__duration">
+                                            観測時間: <?= h(floor($pass['duration'] / 60)) ?>分<?= h($pass['duration'] % 60) ?>秒
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="iss-pass iss-pass--unavailable">
+                                    <p>ISS通過時刻データは現在取得できません。</p>
+                                    <p class="iss-pass__note">ISSは約90分で地球を一周しています。晴れた夜空で明るく動く光点を探してみてください。</p>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="iss-countdown" id="iss-countdown">
+                            <!-- JavaScriptで更新 -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 観測条件スコア -->
+                <section class="panel panel--score">
+                    <div class="panel__header">
+                        <h2 class="panel__title">
+                            <span class="panel__icon">&#11088;</span>
+                            今夜の観測条件
+                        </h2>
+                    </div>
+                    <p class="panel__desc">月明かりや天候を考慮した観測条件の総合評価。星5つが最高の条件です。</p>
+                    <div class="panel__content">
+                        <div class="observation-score">
+                            <div class="observation-score__stars" id="observation-stars">
+                                <?php for ($i = 0; $i < 5; $i++): ?>
+                                    <span class="star <?= $i < $observationScore['total'] ? 'star--active' : '' ?>">&#9733;</span>
+                                <?php endfor; ?>
+                            </div>
+                            <div class="observation-score__label">
+                                <?php
+                                $scoreLabels = [
+                                    1 => '観測困難',
+                                    2 => 'まずまず',
+                                    3 => '良好',
+                                    4 => '好条件',
+                                    5 => '最高の条件'
+                                ];
+                                echo h($scoreLabels[$observationScore['total']] ?? '不明');
+                                ?>
+                            </div>
+                        </div>
+
+                        <div class="observation-factors">
+                            <div class="observation-factor">
+                                <span class="observation-factor__icon">&#127769;</span>
+                                <span class="observation-factor__text"><?= h($observationScore['moon_impact']) ?></span>
+                            </div>
+                            <div class="observation-factor">
+                                <span class="observation-factor__icon">&#127782;</span>
+                                <span class="observation-factor__text" id="weather-status">天気情報は位置情報取得後に表示</span>
+                            </div>
+                        </div>
+
+                        <div class="observation-advice" id="observation-advice">
+                            <h4>観測アドバイス</h4>
+                            <ul>
+                                <?php if ($moonPhase['illumination'] > 70): ?>
+                                    <li>月明かりが強いため、明るい天体（惑星など）の観測がおすすめです</li>
+                                <?php else: ?>
+                                    <li>暗い天体や星雲の観測に適しています</li>
+                                <?php endif; ?>
+                                <li>観測の15分前には暗い場所で目を慣らしましょう</li>
+                                <li>防寒対策をしっかりと行いましょう</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 今夜見える惑星 -->
+            <section class="panel panel--planets">
                 <div class="panel__header">
                     <h2 class="panel__title">
-                        <span class="panel__icon">&#128105;&#8205;&#128640;</span>
-                        ASTRONAUTS IN SPACE
+                        <span class="panel__icon">&#127774;</span>
+                        今夜見える惑星
                     </h2>
-                    <div class="panel__count" id="astronaut-count">
-                        <?= $astronauts ? h($astronauts['number']) : '--' ?> 人
-                    </div>
+                    <div class="panel__badge"><?= count($visiblePlanets) ?>個</div>
                 </div>
-                <p class="panel__desc">現在，宇宙空間で活動している全ての宇宙飛行士と所属する宇宙船を表示します．</p>
+                <p class="panel__desc">今夜観測可能な惑星とその見つけ方。明るい惑星は肉眼でも確認できます。</p>
                 <div class="panel__content">
-                    <ul class="astronaut-list" id="astronaut-list">
-                        <?php if ($astronauts && !empty($astronauts['people'])): ?>
-                            <?php foreach ($astronauts['people'] as $person): ?>
-                                <li class="astronaut-list__item">
-                                    <span class="astronaut-list__name"><?= h($person['name']) ?></span>
-                                    <span class="astronaut-list__craft"><?= h($person['craft']) ?></span>
-                                </li>
+                    <div class="planets-list">
+                        <?php if (!empty($visiblePlanets)): ?>
+                            <?php foreach ($visiblePlanets as $planet): ?>
+                                <div class="planet-card">
+                                    <div class="planet-card__symbol"><?= h($planet['symbol']) ?></div>
+                                    <div class="planet-card__info">
+                                        <div class="planet-card__name"><?= h($planet['name']) ?></div>
+                                        <div class="planet-card__name-en"><?= h($planet['name_en']) ?></div>
+                                    </div>
+                                    <div class="planet-card__details">
+                                        <div class="planet-card__detail">
+                                            <span class="planet-card__label">観測時間</span>
+                                            <span class="planet-card__value"><?= h($planet['best_time']) ?></span>
+                                        </div>
+                                        <div class="planet-card__detail">
+                                            <span class="planet-card__label">方角</span>
+                                            <span class="planet-card__value"><?= h($planet['direction']) ?></span>
+                                        </div>
+                                        <div class="planet-card__detail">
+                                            <span class="planet-card__label">等級</span>
+                                            <span class="planet-card__value"><?= h($planet['magnitude']) ?></span>
+                                        </div>
+                                    </div>
+                                    <div class="planet-card__note"><?= h($planet['note']) ?></div>
+                                </div>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <li class="astronaut-list__item">データを取得中...</li>
+                            <p class="no-data">今夜観測可能な惑星はありません</p>
                         <?php endif; ?>
-                    </ul>
+                    </div>
                 </div>
             </section>
 
-            <!-- 地球接近天体 -->
-            <section class="panel panel--neo">
+            <!-- 今夜見える星座 -->
+            <section class="panel panel--constellations">
                 <div class="panel__header">
                     <h2 class="panel__title">
-                        <span class="panel__icon">&#9788;</span>
-                        NEAR EARTH OBJECTS
+                        <span class="panel__icon">&#10024;</span>
+                        今夜見える星座
                     </h2>
-                    <div class="panel__badge">今週TOP5</div>
+                    <div class="panel__badge"><?= count($visibleConstellations) ?>星座</div>
                 </div>
-                <p class="panel__desc">今週地球に最も接近する小惑星TOP5．赤い警告はちょっと危険な天体を示します．</p>
+                <p class="panel__desc">今の季節に見られる代表的な星座。星座探しの参考にしてください。</p>
                 <div class="panel__content">
-                    <div class="neo-list" id="neo-list">
-                        <?php if ($nearEarthObjects && !empty($nearEarthObjects)): ?>
-                            <?php foreach ($nearEarthObjects as $index => $neo): ?>
-                                <div class="neo-card <?= $neo['is_hazardous'] ? 'neo-card--hazardous' : '' ?>">
-                                    <div class="neo-card__rank"><?= $index + 1 ?></div>
-                                    <div class="neo-card__info">
-                                        <div class="neo-card__name"><?= h($neo['name']) ?></div>
-                                        <div class="neo-card__date">接近日: <?= h($neo['date']) ?></div>
+                    <div class="constellations-grid">
+                        <?php foreach ($visibleConstellations as $constellation): ?>
+                            <div class="constellation-card">
+                                <div class="constellation-card__header">
+                                    <div class="constellation-card__name"><?= h($constellation['name']) ?></div>
+                                    <div class="constellation-card__difficulty difficulty--<?= $constellation['difficulty'] === '簡単' ? 'easy' : 'normal' ?>">
+                                        <?= h($constellation['difficulty']) ?>
                                     </div>
-                                    <div class="neo-card__stats">
-                                        <div class="neo-card__stat">
-                                            <span class="neo-card__stat-label">距離</span>
-                                            <span class="neo-card__stat-value"><?= h(number_format($neo['distance_km'])) ?> km</span>
-                                        </div>
-                                        <div class="neo-card__stat">
-                                            <span class="neo-card__stat-label">直径</span>
-                                            <span class="neo-card__stat-value"><?= h(round($neo['diameter_min'])) ?>-<?= h(round($neo['diameter_max'])) ?> m</span>
-                                        </div>
-                                        <div class="neo-card__stat">
-                                            <span class="neo-card__stat-label">速度</span>
-                                            <span class="neo-card__stat-value"><?= h(number_format($neo['velocity_kmh'])) ?> km/h</span>
-                                        </div>
-                                    </div>
-                                    <?php if ($neo['is_hazardous']): ?>
-                                        <div class="neo-card__warning">&#9888; POTENTIALLY HAZARDOUS</div>
+                                </div>
+                                <div class="constellation-card__star">
+                                    <span class="label">主な星:</span> <?= h($constellation['main_star']) ?>
+                                </div>
+                                <div class="constellation-card__direction">
+                                    <span class="label">方角:</span> <?= h($constellation['direction']) ?>
+                                </div>
+                                <div class="constellation-card__desc"><?= h($constellation['description']) ?></div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 今後の天文イベント -->
+            <?php if (!empty($upcomingEvents)): ?>
+            <section class="panel panel--events">
+                <div class="panel__header">
+                    <h2 class="panel__title">
+                        <span class="panel__icon">&#128197;</span>
+                        今後の天文イベント
+                    </h2>
+                    <div class="panel__badge">30日以内</div>
+                </div>
+                <p class="panel__desc">近日中に予定されている天文イベント。流星群や季節の節目をチェック。</p>
+                <div class="panel__content">
+                    <div class="events-list">
+                        <?php foreach ($upcomingEvents as $event): ?>
+                            <div class="event-card event-card--<?= $event['type'] === '流星群' ? 'meteor' : 'season' ?>">
+                                <div class="event-card__date">
+                                    <div class="event-card__month"><?= h(date('n月', strtotime($event['date']))) ?></div>
+                                    <div class="event-card__day"><?= h(date('j', strtotime($event['date']))) ?></div>
+                                </div>
+                                <div class="event-card__info">
+                                    <div class="event-card__name"><?= h($event['name']) ?></div>
+                                    <div class="event-card__type"><?= h($event['type']) ?></div>
+                                </div>
+                                <div class="event-card__countdown">
+                                    <?php if ($event['days_until'] === 0): ?>
+                                        <span class="today">今日!</span>
+                                    <?php else: ?>
+                                        あと<span class="days"><?= h($event['days_until']) ?></span>日
                                     <?php endif; ?>
                                 </div>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <div class="neo-card">
-                                <div class="neo-card__info">データを取得中...</div>
                             </div>
-                        <?php endif; ?>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </section>
+            <?php endif; ?>
 
-            <!-- NASA APOD -->
-            <section class="panel panel--apod">
+            <!-- 星空マップ -->
+            <section class="panel panel--sky">
                 <div class="panel__header">
                     <h2 class="panel__title">
-                        <span class="panel__icon">&#128247;</span>
-                        NASA PICTURE OF THE DAY
+                        <span class="panel__icon">&#127776;</span>
+                        今夜の星空マップ
                     </h2>
-                    <div class="panel__date" id="apod-date">
-                        <?= $todayApod ? h($todayApod['date']) : '--' ?>
-                    </div>
                 </div>
-                <p class="panel__desc">NASAが毎日公開する天文学的な写真や画像です．1995年より開始されたため，それ以前の者は取得できません．</p>
+                <p class="panel__desc">今夜の星空のイメージ図。実際の星空と見比べてみてください。</p>
                 <div class="panel__content">
-                    <?php if ($todayApod): ?>
-                        <div class="apod">
-                            <?php if ($todayApod['media_type'] === 'image'): ?>
-                                <img src="<?= h($todayApod['url']) ?>" alt="<?= h($todayApod['title']) ?>" class="apod__image" loading="lazy">
-                            <?php else: ?>
-                                <iframe src="<?= h($todayApod['url']) ?>" class="apod__video" allowfullscreen></iframe>
-                            <?php endif; ?>
-                            <div class="apod__info">
-                                <h3 class="apod__title"><?= h($todayApod['title']) ?></h3>
-                                <div class="apod__explanation-wrapper">
-                                    <p class="apod__explanation" id="apod-explanation" data-original="<?= h($todayApod['explanation']) ?>"><?= h($todayApod['explanation']) ?></p>
-                                    <button type="button" class="btn btn--translate" id="translate-apod-btn" data-target="apod-explanation">
-                                        <span class="btn__icon">&#127760;</span>
-                                        日本語に翻訳
-                                    </button>
-                                </div>
+                    <div class="sky-canvas" id="sky-canvas">
+                        <div class="sky-canvas__stars"></div>
+                        <div class="sky-canvas__compass">
+                            <span class="compass-n">北</span>
+                            <span class="compass-e">東</span>
+                            <span class="compass-s">南</span>
+                            <span class="compass-w">西</span>
+                        </div>
+                        <div class="sky-canvas__zenith">天頂</div>
+                        <?php
+                        // 星座の位置を簡易的に表示
+                        $positions = ['top-left', 'top-right', 'center', 'bottom-left', 'bottom-right'];
+                        $i = 0;
+                        foreach (array_slice($visibleConstellations, 0, 5) as $c):
+                            $pos = $positions[$i % 5];
+                        ?>
+                            <div class="sky-canvas__constellation sky-canvas__constellation--<?= $pos ?>">
+                                <?= h($c['name']) ?>
                             </div>
-                        </div>
-                    <?php else: ?>
-                        <div class="apod">
-                            <p class="apod__loading">画像を取得中...</p>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </section>
-
-            <!-- 宇宙統計情報 -->
-            <section class="panel panel--stats">
-                <div class="panel__header">
-                    <h2 class="panel__title">
-                        <span class="panel__icon">&#128202;</span>
-                        SPACE STATISTICS
-                    </h2>
-                    <div class="panel__badge">リアルタイム</div>
-                </div>
-                <p class="panel__desc">今の宇宙に関する統計データです．数値は概算値です．</p>
-                <div class="panel__content">
-                    <div class="space-stats">
-                        <div class="space-stat-card">
-                            <div class="space-stat-card__icon">&#128752;</div>
-                            <div class="space-stat-card__value" id="iss-orbits"><?= h(number_format($spaceStats['iss_orbits'])) ?></div>
-                            <div class="space-stat-card__label">ISS累計周回数</div>
-                            <div class="space-stat-card__sub">1998年11月20日から</div>
-                        </div>
-                        <div class="space-stat-card">
-                            <div class="space-stat-card__icon">&#128640;</div>
-                            <div class="space-stat-card__value"><?= h(number_format($spaceStats['voyager_distance_au'])) ?> AU</div>
-                            <div class="space-stat-card__label">ボイジャー1号の距離</div>
-                            <div class="space-stat-card__sub">光で約<?= h($spaceStats['voyager_light_hours']) ?>時間</div>
-                        </div>
-                        <div class="space-stat-card">
-                            <div class="space-stat-card__icon">&#127759;</div>
-                            <div class="space-stat-card__value"><?= h(number_format($spaceStats['iss_days_in_space'])) ?></div>
-                            <div class="space-stat-card__label">ISS運用日数</div>
-                            <div class="space-stat-card__sub"><?= h(round($spaceStats['iss_days_in_space'] / 365.25, 1)) ?>年以上</div>
-                        </div>
-                        <div class="space-stat-card">
-                            <div class="space-stat-card__icon">&#127775;</div>
-                            <div class="space-stat-card__value" id="saved-count"><?= h($spaceStats['saved_birthdays']) ?></div>
-                            <div class="space-stat-card__label">保存された宇宙の誕生日</div>
-                            <div class="space-stat-card__sub">TIME MACHINEで追加</div>
-                        </div>
+                        <?php
+                            $i++;
+                        endforeach;
+                        ?>
                     </div>
                 </div>
             </section>
         </div>
     </main>
 
-    <!-- フッター
+    <!-- フッター -->
     <footer class="footer">
         <div class="footer__credits">
             <p>Data provided by NASA, Open Notify API, Sunrise-Sunset.org</p>
@@ -441,12 +843,11 @@ $jsData = [
             <p>Space Control Center - 宇宙コックピット</p>
         </div>
     </footer>
-    -->
 
     <!-- JavaScript -->
     <script>
-        // PHPから渡す初期データ
-        window.SPACE_DATA = <?= json_encode($jsData, JSON_UNESCAPED_UNICODE) ?>;
+        // PHPから渡すデータ
+        window.TONIGHT_DATA = <?= json_encode($jsData, JSON_UNESCAPED_UNICODE) ?>;
     </script>
     <script src="script.js"></script>
 </body>
